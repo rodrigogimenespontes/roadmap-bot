@@ -18,7 +18,7 @@ slack_headers = {
 }
 
 def read_context():
-    if not os.path.exists(CONTTEXT_FILE):
+    if not os.path.exists(CONTEXT_FILE):
         return ""
     with open(CONTEXT_FILE, "r", encoding="utf-8") as f:
         return f.read()
