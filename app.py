@@ -33,10 +33,8 @@ def slack_events():
             with open(CONTEXT_FILE, "r") as f:
                 context = f.read()
 
-        prompt = f"{context}
+        prompt = f"{context}\n\nUsuário: {text}\nBot:"
 
-Usuário: {text}
-Bot:"
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
