@@ -41,14 +41,24 @@ def slack_events():
         event_type = event.get("type")
         logging.info(f"🔄 Tipo de evento: {event_type}")
 
+        # 📣 Caso 1: menção ao bot em canal
         if event_type == "app_mention":
             user = event.get("user")
             text = event.get("text")
             channel = event.get("channel")
             logging.info(f"📣 Menção recebida de {user} no canal {channel}: {text}")
-
             response_text = f"Olá <@{user}>! Recebi sua pergunta: *{text}* 👀"
             send_message(channel, response_text)
+
+        # 💬 Caso 2: mensagem direta (DM)
+        elif event_type == "message" and event.get("channel_type") == "im":
+            user = event.get("user")
+            text = event.get("text")
+            channel = event.get("channel")
+            logging.info(f"💬 DM recebida de {user}: {text}")
+            response_text = f"Olá <@{user}>! Estou te ouvindo aqui no privado também 👀"
+            send_message(channel, response_text)
+
         else:
             logging.info("⚠️ Evento não tratado: ignorado.")
 
