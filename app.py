@@ -18,7 +18,7 @@ def slack_events():
     data = request.get_json()
     logging.info("📥 Payload recebido do Slack:\n%s", json.dumps(data, indent=2))
 
-    # Verificação do Slack
+    # Verificação de URL do Slack
     if data.get("type") == "url_verification":
         return jsonify({"challenge": data["challenge"]})
 
@@ -27,29 +27,36 @@ def slack_events():
         event_type = event.get("type")
         logging.info(f"🔄 Tipo de evento: {event_type}")
 
-        # 1. Evento de mensagem
-        if event_type == "message" and not event.get("bot_id"):
+        # Evita responder a si mesmo
+        authorizations = data.get("authorizations", [])
+        bot_user_id = authorizations[0]["user_id"] if authorizations else None
+        if event.get("user") == bot_user_id:
+            logging.info("🚫 Mensagem do próprio bot — ignorada.")
+            return jsonify({"status": "ignored"})
+
+        # 1. Resposta a mensagem direta (DM)
+        if event_type == "message" and event.get("channel_type") == "im" and not event.get("subtype"):
             user = event.get("user")
             text = event.get("text")
             channel = event.get("channel")
             logging.info(f"💬 DM recebida de {user}: {text}")
+            responder(channel, f"Olá <@{user}>! Estou te ouvindo aqui no privado também 👀")
 
-            if f"<@{get_bot_user_id()}>" in text:
-                responder(channel, f"Olá <@{user}>! Estou te ouvindo aqui no privado também 👀")
+        # 2. Arquivo compartilhado por mensagem (subtype: file_share)
+        elif event_type == "message" and event.get("subtype") == "file_share":
+            files = event.get("files", [])
+            for f in files:
+                file_id = f.get("id")
+                logging.info(f"📎 Arquivo recebido via mensagem: {file_id}")
+                download_file(file_id)
 
-        # 2. Evento de arquivo
+        # 3. Evento file_shared direto (caso futuro)
         elif event_type == "file_shared":
             file_id = event.get("file_id")
-            logging.info(f"📎 Arquivo compartilhado: {file_id}")
+            logging.info(f"📎 Arquivo recebido via file_shared: {file_id}")
             download_file(file_id)
 
     return jsonify({"status": "ok"})
-
-def get_bot_user_id():
-    """Busca o ID do bot para comparação em menções"""
-    headers = {"Authorization": f"Bearer {SLACK_BOT_TOKEN}"}
-    res = requests.get("https://slack.com/api/auth.test", headers=headers)
-    return res.json().get("user_id", "")
 
 def responder(channel, texto):
     headers = {
